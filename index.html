@@ -46,7 +46,6 @@
             padding: 40px 20px;
             cursor: pointer;
             transition: all 0.2s;
-            position: relative;
             margin-bottom: 25px;
         }
         .upload-zone:active { transform: scale(0.98); background: #f0f0f0; }
@@ -68,19 +67,10 @@
         .download-btn {
             display: block; width: 100%; background: var(--main); color: #fff;
             padding: 18px; border-radius: var(--radius); border: none;
-            text-decoration: none; font-weight: 800; font-size: 1rem; cursor: pointer;
-            box-sizing: border-box;
-            -webkit-appearance: none;
+            font-weight: 800; font-size: 1rem; cursor: pointer;
+            box-sizing: border-box; -webkit-appearance: none;
         }
-
-        /* 保存先ガイド */
-        .guide-text {
-            font-size: 0.7rem;
-            color: #999;
-            margin-top: 15px;
-            line-height: 1.5;
-            font-weight: 500;
-        }
+        .help-text { font-size: 11px; color: #aaa; margin-top: 12px; line-height: 1.4; }
 
         footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
         .footer-btns { margin-top: 30px; }
@@ -105,7 +95,12 @@
         }
         .close-x { position: absolute; top: 15px; right: 20px; font-size: 20px; color: #ccc; cursor: pointer; }
 
-        input { -webkit-appearance: none; -webkit-text-fill-color: var(--main); opacity: 1 !important; }
+        /* iOS Fixes */
+        input, textarea {
+            -webkit-appearance: none;
+            -webkit-text-fill-color: var(--main);
+            opacity: 1 !important;
+        }
     </style>
 </head>
 <body>
@@ -114,20 +109,17 @@
     <h1>Photo Privacy Cleaner</h1>
     <p class="subtitle">Wipe GPS & metadata from your photos instantly.</p>
 
-    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <p id="uploadText">Tap to select or drop a photo</p>
-        <span id="uploadSubText">Exif metadata will be removed locally.</span>
-        <input type="file" id="fileInput" accept="image/*" onchange="processImage(event)">
+    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <p id="mainPrompt">Tap to select photo(s)</p>
+        <span id="subPrompt">Exif metadata will be removed locally.</span>
+        <input type="file" id="fileInput" accept="image/*" multiple onchange="processImages(event)">
     </div>
 
     <div id="resultArea">
         <div class="preview-card">
-            <div class="status-msg">✓ Metadata Stripped</div>
+            <div class="status-msg" id="statusMsg">✓ Metadata Stripped</div>
             <button class="download-btn" id="downloadBtn">Download Safe Photo</button>
-            <div class="guide-text">
-                Check "Files" app or "Downloads" folder.<br>
-                iPhone: Tap the down arrow in the address bar.
-            </div>
+            <p class="help-text">Check "Files" app or "Downloads" folder.<br>iPhone: Tap the down arrow in the address bar.</p>
         </div>
     </div>
 
@@ -153,43 +145,72 @@
 </div>
 
 <script>
-    function processImage(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    let processedFiles = [];
 
-        // UIリセット：新しい写真が選ばれた瞬間に結果エリアを隠す
-        document.getElementById('resultArea').style.display = 'none';
-        document.getElementById('uploadText').innerText = "Processing...";
+    async function processImages(event) {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
+        processedFiles = [];
+        const statusMsg = document.getElementById('statusMsg');
+        const mainPrompt = document.getElementById('mainPrompt');
+        const downloadBtn = document.getElementById('downloadBtn');
 
-                canvas.toBlob((blob) => {
-                    const url = URL.createObjectURL(blob);
-                    const downloadBtn = document.getElementById('downloadBtn');
-                    
-                    downloadBtn.onclick = () => {
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = `clean_${file.name.split('.')[0]}.jpg`;
-                        link.click();
-                    };
+        mainPrompt.innerText = "Processing...";
+        
+        for (let i = 0; i < files.length; i++) {
+            const blob = await stripMetadata(files[i]);
+            processedFiles.push({
+                blob: blob,
+                name: `safe_photo_${Date.now()}_${i + 1}.jpg`
+            });
+        }
 
-                    // 完了UIを表示
-                    document.getElementById('resultArea').style.display = 'block';
-                    document.getElementById('uploadText').innerText = "Photo Ready!";
-                }, 'image/jpeg', 0.9);
-            };
-            img.src = e.target.result;
+        // UI Update
+        statusMsg.innerText = `✓ ${files.length} Photo${files.length > 1 ? 's' : ''} Stripped`;
+        mainPrompt.innerText = "Ready to Download!";
+        downloadBtn.innerText = files.length > 1 ? `Download ${files.length} Photos` : "Download Safe Photo";
+        document.getElementById('resultArea').style.display = 'block';
+
+        downloadBtn.onclick = async () => {
+            for (const fileObj of processedFiles) {
+                const url = URL.createObjectURL(fileObj.blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileObj.name;
+                link.click();
+                // iOSで連続ダウンロードを安定させるための微小な待機
+                await new Promise(resolve => setTimeout(resolve, 300));
+                URL.revokeObjectURL(url);
+            }
+            resetUI();
         };
-        reader.readAsDataURL(file);
+    }
+
+    function stripMetadata(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function resetUI() {
+        document.getElementById('resultArea').style.display = 'none';
+        document.getElementById('mainPrompt').innerText = "Tap to select photo(s)";
+        document.getElementById('fileInput').value = ''; // これで同じ写真の連続選択も可能に
+        processedFiles = [];
     }
 
     function showModal() { document.getElementById('modal').style.display = 'flex'; }
