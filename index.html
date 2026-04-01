@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Photo Privacy Cleaner</title>
+    
+    <link rel="icon" href="image_57.png">
+    <link rel="apple-touch-icon" href="image_57.png">
+
+    <style>
+        :root {
+            --main: #333;
+            --bg: #fff;
+            --accent: #eee;
+            --input-bg: #fafafa;
+            --radius: 15px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
+        .subtitle { font-size: 0.85rem; color: #666; font-weight: 500; margin-bottom: 30px; }
+
+        /* Drop Area / Input UI */
+        .upload-zone {
+            background: var(--input-bg);
+            border: 2px dashed var(--accent);
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            margin-bottom: 25px;
+        }
+        .upload-zone:active { transform: scale(0.98); background: #f0f0f0; }
+        
+        .upload-zone p { font-weight: 700; margin: 0; font-size: 0.9rem; }
+        .upload-zone span { font-size: 0.75rem; color: #999; display: block; margin-top: 8px; }
+
+        #fileInput { display: none; }
+
+        /* Result Area */
+        #resultArea { display: none; margin-top: 20px; }
+        .preview-card {
+            background: #fff;
+            border: 1px solid #f0f0f0;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .status-msg { color: #2ecc71; font-weight: 800; font-size: 0.9rem; margin-bottom: 15px; }
+
+        .download-btn {
+            display: block; width: 100%; background: var(--main); color: #fff;
+            padding: 18px; border-radius: var(--radius); border: none;
+            text-decoration: none; font-weight: 800; font-size: 1rem; cursor: pointer;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
+
+        /* Standard Footer & Buttons */
+        footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
+        .footer-btns { margin-top: 30px; }
+        .kofi-btn {
+            display: inline-block; background: var(--main); color: #fff;
+            padding: 12px 25px; border-radius: var(--radius);
+            text-decoration: none; font-weight: bold; font-size: 14px; margin-bottom: 12px;
+        }
+        .home-btn {
+            display: block; width: 60%; margin: 0 auto; background: var(--accent);
+            color: var(--main); border: none; padding: 10px;
+            border-radius: var(--radius); font-weight: 700; font-size: 13px; cursor: pointer;
+        }
+
+        #modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: #fff; width: 85%; max-width: 320px; padding: 30px;
+            border-radius: var(--radius); text-align: left; position: relative;
+        }
+        .close-x { position: absolute; top: 15px; right: 20px; font-size: 20px; color: #ccc; cursor: pointer; }
+
+        /* iOS Input Fix */
+        input, textarea {
+            -webkit-appearance: none;
+            -webkit-text-fill-color: var(--main);
+            opacity: 1 !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Photo Privacy Cleaner</h1>
+    <p class="subtitle">Wipe GPS & metadata from your photos instantly.</p>
+
+    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <p>Tap to select or drop a photo</p>
+        <span>Exif metadata will be removed locally.</span>
+        <input type="file" id="fileInput" accept="image/*" onchange="processImage(event)">
+    </div>
+
+    <div id="resultArea">
+        <div class="preview-card">
+            <div class="status-msg">✓ Metadata Stripped</div>
+            <button class="download-btn" id="downloadBtn">Download Safe Photo</button>
+        </div>
+    </div>
+
+    <div class="footer-btns">
+        <a href="https://ko-fi.com/afrorakda" target="_blank" class="kofi-btn">☕️buy me a coffee</a>
+        <button class="home-btn" onclick="showModal()">Add to Home Screen</button>
+    </div>
+
+    <footer>
+        <div>No login / No tracking / No ads / Browser only</div>
+        <div>Privacy Policy / afrorakda © 2026</div>
+    </footer>
+</div>
+
+<div id="modal" onclick="hideModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-x" onclick="hideModal()">×</span>
+        <h3>📱 Install</h3>
+        <p>Add to your home screen.</p>
+        <p>🍏 <strong>iPhone (Safari):</strong><br>Tap Share, then Add to Home Screen.</p>
+        <p>🤖 <strong>Android (Chrome):</strong><br>Tap Menu (⋮), then Add to Home Screen.</p>
+    </div>
+</div>
+
+<script>
+    function processImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // Canvas描画によるExif削除（ブラウザ標準仕様）
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                // Metaデータなしの新規画像として出力
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const downloadBtn = document.getElementById('downloadBtn');
+                    
+                    downloadBtn.onclick = () => {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `clean_${file.name}`;
+                        link.click();
+                    };
+
+                    document.getElementById('resultArea').style.display = 'block';
+                    document.querySelector('.upload-zone p').innerText = "Photo Ready!";
+                }, file.type);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function showModal() { document.getElementById('modal').style.display = 'flex'; }
+    function hideModal() { document.getElementById('modal').style.display = 'none'; }
+</script>
+
+</body>
+</html>
