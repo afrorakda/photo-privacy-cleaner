@@ -39,7 +39,6 @@
         h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
         .subtitle { font-size: 0.85rem; color: #666; font-weight: 500; margin-bottom: 30px; }
 
-        /* Drop Area / Input UI */
         .upload-zone {
             background: var(--input-bg);
             border: 2px dashed var(--accent);
@@ -51,13 +50,11 @@
             margin-bottom: 25px;
         }
         .upload-zone:active { transform: scale(0.98); background: #f0f0f0; }
-        
         .upload-zone p { font-weight: 700; margin: 0; font-size: 0.9rem; }
         .upload-zone span { font-size: 0.75rem; color: #999; display: block; margin-top: 8px; }
 
         #fileInput { display: none; }
 
-        /* Result Area */
         #resultArea { display: none; margin-top: 20px; }
         .preview-card {
             background: #fff;
@@ -76,7 +73,15 @@
             -webkit-appearance: none;
         }
 
-        /* Standard Footer & Buttons */
+        /* 保存先ガイド */
+        .guide-text {
+            font-size: 0.7rem;
+            color: #999;
+            margin-top: 15px;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
         footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
         .footer-btns { margin-top: 30px; }
         .kofi-btn {
@@ -100,12 +105,7 @@
         }
         .close-x { position: absolute; top: 15px; right: 20px; font-size: 20px; color: #ccc; cursor: pointer; }
 
-        /* iOS Input Fix */
-        input, textarea {
-            -webkit-appearance: none;
-            -webkit-text-fill-color: var(--main);
-            opacity: 1 !important;
-        }
+        input { -webkit-appearance: none; -webkit-text-fill-color: var(--main); opacity: 1 !important; }
     </style>
 </head>
 <body>
@@ -114,9 +114,9 @@
     <h1>Photo Privacy Cleaner</h1>
     <p class="subtitle">Wipe GPS & metadata from your photos instantly.</p>
 
-    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-        <p>Tap to select or drop a photo</p>
-        <span>Exif metadata will be removed locally.</span>
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <p id="uploadText">Tap to select or drop a photo</p>
+        <span id="uploadSubText">Exif metadata will be removed locally.</span>
         <input type="file" id="fileInput" accept="image/*" onchange="processImage(event)">
     </div>
 
@@ -124,6 +124,10 @@
         <div class="preview-card">
             <div class="status-msg">✓ Metadata Stripped</div>
             <button class="download-btn" id="downloadBtn">Download Safe Photo</button>
+            <div class="guide-text">
+                Check "Files" app or "Downloads" folder.<br>
+                iPhone: Tap the down arrow in the address bar.
+            </div>
         </div>
     </div>
 
@@ -153,19 +157,20 @@
         const file = event.target.files[0];
         if (!file) return;
 
+        // UIリセット：新しい写真が選ばれた瞬間に結果エリアを隠す
+        document.getElementById('resultArea').style.display = 'none';
+        document.getElementById('uploadText').innerText = "Processing...";
+
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
-                // Canvas描画によるExif削除（ブラウザ標準仕様）
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                
                 canvas.width = img.width;
                 canvas.height = img.height;
                 ctx.drawImage(img, 0, 0);
 
-                // Metaデータなしの新規画像として出力
                 canvas.toBlob((blob) => {
                     const url = URL.createObjectURL(blob);
                     const downloadBtn = document.getElementById('downloadBtn');
@@ -173,13 +178,14 @@
                     downloadBtn.onclick = () => {
                         const link = document.createElement('a');
                         link.href = url;
-                        link.download = `clean_${file.name}`;
+                        link.download = `clean_${file.name.split('.')[0]}.jpg`;
                         link.click();
                     };
 
+                    // 完了UIを表示
                     document.getElementById('resultArea').style.display = 'block';
-                    document.querySelector('.upload-zone p').innerText = "Photo Ready!";
-                }, file.type);
+                    document.getElementById('uploadText').innerText = "Photo Ready!";
+                }, 'image/jpeg', 0.9);
             };
             img.src = e.target.result;
         };
