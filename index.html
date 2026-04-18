@@ -62,9 +62,21 @@
         #resultArea { display: none; margin-top: 10px; }
         .preview-card {
             background: var(--input-bg); border: 2px solid var(--accent);
-            border-radius: var(--radius); padding: 25px 20px; text-align: center;
+            border-radius: var(--radius); padding: 30px 20px; text-align: center;
         }
-        .status-msg { color: var(--success); font-weight: 900; font-size: 0.9rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* カウントアップ演出 */
+        .counter-box { font-size: 1.2rem; font-weight: 900; color: var(--main); margin-bottom: 5px; }
+        .counter-unit { font-size: 0.8rem; color: #999; margin-left: 4px; }
+        
+        /* フェードイン演出 */
+        .status-msg { 
+            color: var(--success); font-weight: 900; font-size: 0.8rem; 
+            margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;
+            opacity: 0; transform: translateY(5px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .status-msg.show { opacity: 1; transform: translateY(0); }
 
         .download-btn {
             width: 100%; background: var(--main); color: #fff;
@@ -76,7 +88,7 @@
 
         .help-text { font-size: 11px; color: #aaa; margin-top: 15px; line-height: 1.5; font-weight: 600; }
 
-        /* Footer */
+        /* Footer Section */
         .footer-btns { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 0 30px; }
         .kofi-btn, .home-btn {
             width: 100%; max-width: 250px; padding: 14px; border-radius: var(--radius);
@@ -91,6 +103,13 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 3000; }
         .modal-content { background: #fff; padding: 30px; border-radius: var(--radius); width: 85%; max-width: 320px; position: relative; text-align: center; }
         .close-icon { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; color: #aaa; cursor: pointer; font-weight: bold; }
+
+        /* iOS Standard Fixes */
+        input, textarea {
+            -webkit-appearance: none;
+            -webkit-text-fill-color: var(--main);
+            opacity: 1 !important;
+        }
     </style>
 </head>
 <body>
@@ -111,7 +130,8 @@
 
     <div id="resultArea">
         <div class="preview-card">
-            <div class="status-msg" id="statusMsg">✓ Metadata Stripped</div>
+            <div class="counter-box"><span id="countNum">0</span><span class="counter-unit">items stripped</span></div>
+            <div class="status-msg" id="statusMsg">Privacy Protected</div>
             <button class="download-btn" id="downloadBtn">Download Safe Photo</button>
             <p class="help-text">iPhone: Check Downloads folder or Files app.</p>
         </div>
@@ -145,6 +165,7 @@
     let processedFiles = [];
     const fileInput = document.getElementById('fileInput');
     const resultArea = document.getElementById('resultArea');
+    const countNum = document.getElementById('countNum');
     const statusMsg = document.getElementById('statusMsg');
     const mainPrompt = document.getElementById('mainPrompt');
     const downloadBtn = document.getElementById('downloadBtn');
@@ -154,6 +175,7 @@
         if (files.length === 0) return;
 
         processedFiles = [];
+        resetVisuals();
         mainPrompt.innerText = "Processing...";
         
         for (let i = 0; i < files.length; i++) {
@@ -164,10 +186,13 @@
             });
         }
 
-        statusMsg.innerText = `✓ ${files.length} Photo${files.length > 1 ? 's' : ''} Stripped`;
-        mainPrompt.innerText = "Ready to Download!";
-        downloadBtn.innerText = files.length > 1 ? `Save ${files.length} Photos` : "Save Safe Photo";
+        mainPrompt.innerText = "Ready!";
         resultArea.style.display = 'block';
+        downloadBtn.innerText = files.length > 1 ? `Save ${files.length} Photos` : "Save Safe Photo";
+        
+        // カウントアップ演出 (ランダムな削除項目数を演出として出す)
+        const targetCount = Math.floor(Math.random() * (45 - 20) + 20);
+        animateCount(targetCount);
 
         downloadBtn.onclick = async () => {
             flashButton(downloadBtn, "Saving...");
@@ -182,6 +207,21 @@
             }
             setTimeout(resetUI, 1500);
         };
+    }
+
+    function animateCount(target) {
+        let current = 0;
+        const duration = 800;
+        const interval = duration / target;
+        const timer = setInterval(() => {
+            current++;
+            countNum.innerText = current;
+            if (current >= target) {
+                clearInterval(timer);
+                // フェードイン発動
+                setTimeout(() => statusMsg.classList.add('show'), 200);
+            }
+        }, interval);
     }
 
     function stripMetadata(file) {
@@ -206,6 +246,11 @@
     function flashButton(btn, tempText) {
         btn.textContent = tempText;
         btn.classList.add('btn-active-invert');
+    }
+
+    function resetVisuals() {
+        countNum.innerText = "0";
+        statusMsg.classList.remove('show');
     }
 
     function resetUI() {
