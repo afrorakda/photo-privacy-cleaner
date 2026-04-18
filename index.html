@@ -50,12 +50,20 @@
         .upload-zone {
             background: var(--input-bg); border: 2px dashed var(--accent);
             border-radius: var(--radius); padding: 50px 20px; cursor: pointer;
-            transition: transform 0.1s, background 0.2s; margin-bottom: 20px; text-align: center;
+            transition: transform 0.1s, background 0.3s; margin-bottom: 20px; text-align: center;
         }
         .upload-zone:active { transform: scale(0.98); background: #f0f0f0; }
         .upload-zone .lock-icon { font-size: 1.5rem; display: block; margin-bottom: 10px; }
         .upload-zone p { font-weight: 800; margin: 0; font-size: 1rem; }
         .upload-zone span { font-size: 0.75rem; color: #999; display: block; margin-top: 10px; font-weight: 600; }
+
+        /* 次のアクションを促す点滅演出 */
+        @keyframes flash-hint {
+            0% { background: var(--input-bg); border-color: var(--accent); }
+            50% { background: var(--accent); border-color: var(--main); }
+            100% { background: var(--input-bg); border-color: var(--accent); }
+        }
+        .flash-active { animation: flash-hint 0.6s ease-out; }
 
         #fileInput { display: none; }
 
@@ -158,6 +166,7 @@
     let currentBlob = null;
     let currentFileName = "";
     const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
     const resultArea = document.getElementById('resultArea');
     const countNum = document.getElementById('countNum');
     const statusMsg = document.getElementById('statusMsg');
@@ -238,6 +247,7 @@
         countNum.innerText = "0";
         statusMsg.classList.remove('show');
         downloadBtn.classList.remove('btn-active-invert');
+        dropZone.classList.remove('flash-active');
     }
 
     function resetUI() {
@@ -246,6 +256,10 @@
         downloadBtn.classList.remove('btn-active-invert');
         fileInput.value = '';
         currentBlob = null;
+        
+        // リセット完了時にふわっと光らせる
+        dropZone.classList.add('flash-active');
+        setTimeout(() => dropZone.classList.remove('flash-active'), 700);
     }
 
     document.getElementById('homeBtn').onclick = () => document.getElementById('modal').style.display = 'flex';
