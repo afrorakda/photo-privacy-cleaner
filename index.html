@@ -188,17 +188,32 @@
         animateCount(targetCount);
 
         downloadBtn.onclick = async () => {
-            flashButton(downloadBtn, "Saving...");
-            for (const fileObj of processedFiles) {
+            const originalBtnText = downloadBtn.innerText;
+            downloadBtn.classList.add('btn-active-invert');
+            
+            for (let i = 0; i < processedFiles.length; i++) {
+                if (processedFiles.length > 1) {
+                    downloadBtn.innerText = `Saving (${i + 1}/${processedFiles.length})...`;
+                } else {
+                    downloadBtn.innerText = "Saving...";
+                }
+                
+                const fileObj = processedFiles[i];
                 const url = URL.createObjectURL(fileObj.blob);
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = fileObj.name;
+                document.body.appendChild(link);
                 link.click();
-                await new Promise(resolve => setTimeout(resolve, 300));
+                document.body.removeChild(link);
+                
+                // 連続ダウンロード制限を回避するため、800msの間隔をあける
+                await new Promise(resolve => setTimeout(resolve, 800));
                 URL.revokeObjectURL(url);
             }
-            setTimeout(resetUI, 1500);
+            
+            downloadBtn.innerText = "Saved!";
+            setTimeout(resetUI, 1000);
         };
     }
 
@@ -235,14 +250,10 @@
         });
     }
 
-    function flashButton(btn, tempText) {
-        btn.textContent = tempText;
-        btn.classList.add('btn-active-invert');
-    }
-
     function resetVisuals() {
         countNum.innerText = "0";
         statusMsg.classList.remove('show');
+        downloadBtn.classList.remove('btn-active-invert');
     }
 
     function resetUI() {
