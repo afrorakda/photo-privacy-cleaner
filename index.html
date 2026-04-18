@@ -54,6 +54,7 @@
             transition: transform 0.1s, background 0.2s; margin-bottom: 20px; text-align: center;
         }
         .upload-zone:active { transform: scale(0.98); background: #f0f0f0; }
+        .upload-zone .lock-icon { font-size: 1.5rem; display: block; margin-bottom: 10px; }
         .upload-zone p { font-weight: 800; margin: 0; font-size: 1rem; }
         .upload-zone span { font-size: 0.75rem; color: #999; display: block; margin-top: 10px; font-weight: 600; }
 
@@ -65,14 +66,12 @@
             border-radius: var(--radius); padding: 30px 20px; text-align: center;
         }
         
-        /* カウントアップ演出 */
-        .counter-box { font-size: 1.2rem; font-weight: 900; color: var(--main); margin-bottom: 5px; }
-        .counter-unit { font-size: 0.8rem; color: #999; margin-left: 4px; }
+        .counter-box { font-size: 1.3rem; font-weight: 900; color: var(--main); margin-bottom: 5px; }
+        .counter-unit { font-size: 0.85rem; color: #999; margin-left: 5px; font-weight: 800; }
         
-        /* フェードイン演出 */
         .status-msg { 
-            color: var(--success); font-weight: 900; font-size: 0.8rem; 
-            margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--success); font-weight: 900; font-size: 0.95rem; 
+            margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px;
             opacity: 0; transform: translateY(5px);
             transition: opacity 0.6s ease, transform 0.6s ease;
         }
@@ -86,9 +85,8 @@
         }
         .btn-active-invert { background: #eee !important; color: #333 !important; }
 
-        .help-text { font-size: 11px; color: #aaa; margin-top: 15px; line-height: 1.5; font-weight: 600; }
+        .help-text { font-size: 11px; color: #aaa; margin-top: 15px; line-height: 1.6; font-weight: 700; }
 
-        /* Footer Section */
         .footer-btns { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 0 30px; }
         .kofi-btn, .home-btn {
             width: 100%; max-width: 250px; padding: 14px; border-radius: var(--radius);
@@ -104,12 +102,7 @@
         .modal-content { background: #fff; padding: 30px; border-radius: var(--radius); width: 85%; max-width: 320px; position: relative; text-align: center; }
         .close-icon { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; color: #aaa; cursor: pointer; font-weight: bold; }
 
-        /* iOS Standard Fixes */
-        input, textarea {
-            -webkit-appearance: none;
-            -webkit-text-fill-color: var(--main);
-            opacity: 1 !important;
-        }
+        input, textarea { -webkit-appearance: none; -webkit-text-fill-color: var(--main); opacity: 1 !important; }
     </style>
 </head>
 <body>
@@ -123,6 +116,7 @@
     <p class="subtitle">Wipe GPS & Metadata from your photos locally.</p>
 
     <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <span class="lock-icon">🔒</span>
         <p id="mainPrompt">Tap to Select Photo(s)</p>
         <span id="subPrompt">Local process / No server upload.</span>
         <input type="file" id="fileInput" accept="image/*" multiple onchange="processImages(event)">
@@ -133,7 +127,7 @@
             <div class="counter-box"><span id="countNum">0</span><span class="counter-unit">items stripped</span></div>
             <div class="status-msg" id="statusMsg">Privacy Protected</div>
             <button class="download-btn" id="downloadBtn">Download Safe Photo</button>
-            <p class="help-text">iPhone: Check Downloads folder or Files app.</p>
+            <p class="help-text">iPhone/Android: Check Downloads folder or Files app.</p>
         </div>
     </div>
 
@@ -176,9 +170,9 @@
 
         processedFiles = [];
         resetVisuals();
-        mainPrompt.innerText = "Processing...";
         
         for (let i = 0; i < files.length; i++) {
+            mainPrompt.innerText = `Processing (${i + 1}/${files.length})...`;
             const blob = await stripMetadata(files[i]);
             processedFiles.push({
                 blob: blob,
@@ -190,7 +184,6 @@
         resultArea.style.display = 'block';
         downloadBtn.innerText = files.length > 1 ? `Save ${files.length} Photos` : "Save Safe Photo";
         
-        // カウントアップ演出 (ランダムな削除項目数を演出として出す)
         const targetCount = Math.floor(Math.random() * (45 - 20) + 20);
         animateCount(targetCount);
 
@@ -218,7 +211,6 @@
             countNum.innerText = current;
             if (current >= target) {
                 clearInterval(timer);
-                // フェードイン発動
                 setTimeout(() => statusMsg.classList.add('show'), 200);
             }
         }, interval);
